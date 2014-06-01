@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.css" />
+    <style type="text/css">
+      #map {
+        height:600px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
+    <script src="//code.jquery.com/jquery-migrate-1.2.1.min.js"></script>
+
+    <script src="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.js"></script>
+    <script type="text/javascript">
+      var map = L.map('map'),
+          route_stop_coords = [],
+          query_near_route_api = 'http://0.0.0.0:5000/routes/11008?query=bar';
+
+      function setMapToCurrentLocation(data) {
+        var latitude = data.coords['latitude'];
+        var longitude = data.coords['longitude'];
+        map.setView([latitude, longitude], 13);
+
+        L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+      }
+
+      function handleJsonResponse(stops) {
+        for (stop in stops) {
+          var stop_location = stops[stop]['stop_location'];
+          route_stop_coords.push([stop_location['lat'], stop_location['long']]);
+          stop_venues = stops[stop]['venues'];
+          for(var i=0;i<stop_venues.length;i++) {
+            var latitude = stop_venues[i].location.lat;
+            var longitude = stop_venues[i].location.lng;
+            L.marker([latitude, longitude]).addTo(map)
+              .bindPopup(stop_venues[i].name)
+              .openPopup();
+          }
+        }
+
+        var polyline = L.polyline(route_stop_coords, {color: 'red'}).addTo(map);
+        map.fitBounds(polyline.getBounds());
+      }
+
+      navigator.geolocation.getCurrentPosition(setMapToCurrentLocation);
+      $.getJSON(query_near_route_api, handleJsonResponse);
+
+    </script>
+  </body>
+</html>
