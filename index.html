@@ -10,6 +10,17 @@
   </head>
   <body>
     <div id="map"></div>
+    <div>I'm on the
+      <select id="bus-routes">
+
+      </select>
+       looking for a
+      <select id="things">
+        <option>pharmacy</option>
+        <option>bars</option>
+      </select>
+      <button id="find-things">Find the things!</button>
+    </div>
     <script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
     <script src="//code.jquery.com/jquery-migrate-1.2.1.min.js"></script>
 
@@ -17,7 +28,8 @@
     <script type="text/javascript">
       var map = L.map('map'),
           route_stop_coords = [],
-          query_near_route_api = 'http://metro-stl-routes-venues-api.herokuapp.com/routes/11008?query=bar';
+          query_near_route_api = 'http://metro-stl-routes-venues-api.herokuapp.com/routes/',
+          markers;
 
       function setMapToCurrentLocation(data) {
         var latitude = data.coords['latitude'];
@@ -33,6 +45,7 @@
         for (stop in stops) {
           var stop_location = stops[stop]['stop_location'];
           route_stop_coords.push([stop_location['lat'], stop_location['long']]);
+          console.log()
           stop_venues = stops[stop]['venues'];
           for(var i=0;i<stop_venues.length;i++) {
             var latitude = stop_venues[i].location.lat;
@@ -47,9 +60,58 @@
         map.fitBounds(polyline.getBounds());
       }
 
-      navigator.geolocation.getCurrentPosition(setMapToCurrentLocation);
-      $.getJSON(query_near_route_api, handleJsonResponse);
+      function loadRoutesIntoSelect() {
+        var routes = [];
+        $.getJSON('http://www.corsproxy.com/gtfs-api.herokuapp.com/api/routes/metro-st-louis',
+          function(data) {
+            for (route in data) {
+              route = data[route];
+              routes.push(route);
+            }
 
+            $.each(routes, function(route) {
+              var route_option;
+              route = routes[route];
+              bus_route_text = route['route_short_name'] + ' - ' + route['route_long_name'];
+
+              route_option = $('<option></option>').attr('value',route['route_id']).text(bus_route_text);
+
+              $('select#bus-routes').append(route_option);
+            });
+        });
+      }
+
+      function findThingsWithSelection() {
+        var route = $('select#bus-routes').val(),
+            thing = 'bar', //$('select#things').val(),
+            url;
+
+        clearMap();
+
+        url = query_near_route_api + route + '?query=' + thing;
+
+        console.log(url);
+        $.getJSON(url, handleJsonResponse);
+      }
+
+      function clearMap() {
+        route_stop_coords = [];
+        for(i in map._layers) {
+            if(map._layers[i]._url != "http://{s}.tile.osm.org/{z}/{x}/{y}.png") {
+                try {
+                    map.removeLayer(map._layers[i]);
+                }
+                catch(e) {
+                    console.log("problem with " + e + map._layers[i]);
+                }
+            }
+        }
+      }
+      $(document).ready(function(){
+        navigator.geolocation.getCurrentPosition(setMapToCurrentLocation);
+        $('button#find-things').click(findThingsWithSelection);
+        loadRoutesIntoSelect();
+      });
     </script>
   </body>
 </html>
